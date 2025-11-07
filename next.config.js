@@ -5,13 +5,13 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: '*.s3.eu-west-2.amazonaws.com',
-        pathname: '/mediaApp/public/**',
+        hostname: '*.xxxxxxxxxxxx.amazonaws.com',
+        pathname: '*************/**',
       },
       {
         protocol: 'https',
         hostname: process.env.TCV_CDN_DOMAIN,       // or your exact distro hostname
-        pathname: '/images/posts/**',           // limit to your folder
+        pathname: '/*************/**',           // limit to your folder
       },
     ],
   },
