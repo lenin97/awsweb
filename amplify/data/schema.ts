@@ -65,22 +65,6 @@ import {
     authorization(allow=>[allow.guest()]),
 
 ////////////////////////////////////////////////////////////// upload Flow
-    uplCVfields: a.customType({
-      fileName: a.string().required(),
-      jobDesc: a.string().required(),
-      jobTitle: a.string().required()
-    }),
-
-    retUpInfo: a.customType({
-      id_un: a.string().required(),
-      int_path: a.string().required()
-    }),
-
-    uploadCVflow: a.mutation().
-    arguments({uplCVfieldsarg: a.ref('uplCVfields')}).
-    returns(a.ref('retUpInfo')).
-    authorization(allow=>[allow.guest()]).
-    handler(a.handler.function(uploadCVresolvflow)),// 
 
 ////////////////////////////////////////////////////////////// Main Flow
     CVid: a.customType({
@@ -150,30 +134,7 @@ import {
     */
   
 //////////////////////////////////////////////////////////////3rd step
-    svnewCVarg: a.customType({
-      orgnPath : a.string().required(),
-      tailoredCV : a.string().required(),
-      userId  : a.string().required()
-    }),
-
-    saveTailoredCV: a.query().
-    arguments({svnewCVargArg: a.ref('svnewCVarg')}).
-    returns(a.string()).
-    authorization(allow=>[allow.guest()]).
-    handler(a.handler.function(saveTailoredCV)),//3rd step
-/*
-    genCVpatharg: a.customType({
-      newCVpath: a.string().required()
-    }),
-
-    generateResponse: a.query().
-    arguments({genCVpathargArg: a.ref('genCVpatharg')}).
-    returns(a.string()).
-    authorization(allow=>[allow.authenticated()]).
-    handler(a.handler.function(generateResponse))*/
-
-  })
-    
+        
   .authorization(allow => [
     allow.resource(tailoredCVflow).to(['query', 'mutate']),//mdx2htmlEventHandler
     allow.resource(uploadCVresolvflow).to(['query', 'mutate']),

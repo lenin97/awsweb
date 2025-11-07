@@ -1,5 +1,5 @@
 {
-  "name": "tailorcv_ver02",
+  "name": "xxxxxxxxxx",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -10,7 +10,7 @@
     "lint": "next lint",
     "test": "echo \"Error: no test specified\" && exit 1",
     "seed": "tsx scripts/seed.ts",
-    "sandbox-dev": "ampx sandbox --profile AdministratorAccess-808209773924 --identifier merseyTestEnv --stream-function-logs"
+    "sandbox-dev": ""
   },
   "keywords": [],
   "author": "",

@@ -31,14 +31,7 @@ export function TextractStack(scope: Construct, id: string, bucketl1: CfnBucket,
         local: {
           tryBundle(outputDir: string) {
             // 1️⃣ install deps into bundle
-            execSync(
-              `python -m pip install -r "${path.join(fnDir, "requirements.txt")}" -t "${outputDir}"`,
-              { stdio: "inherit" }
-            );
-            // 2️⃣ copy your source files
-            fs.cpSync(fnDir, outputDir, { recursive: true });
-            //execSync(`cp -r ${fnDir}/* ${path.join(outputDir)}`);
-            return true;
+        
           },
         },
       },

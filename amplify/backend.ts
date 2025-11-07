@@ -56,10 +56,6 @@ const mdxFn = backend.mdx2htmlEventHandler.resources.lambda as lambda.Function;
 const fnRole = mdxFn.role!;
 const tbMDXupdates = backend.data.resources.tables["MDXupdates"];
 const dataStack = cdk.Stack.of(tbMDXupdates);
-console.log(  "available data tables:",Object.keys(backend.data.resources.tables || {}));//process.env.MODEL_AI_ARN!
-console.log("[backend-buildtime]::MODEL_AI_ARN::",process.env.MODEL_AI_ARN,"::ACCOUNT_ID::",process.env.ACCOUNT_ID)
-const seoEvTrig = backend.seoEventHandler.resources.lambda as lambda.Function;
-const tailorCVEventTrigger= backend.tailorCVEvent.resources.lambda as lambda.Function;
 
 const prenm_posts='mediaApp/public/posts/'
 const triggerEventFile='done.txt'
@@ -187,28 +183,6 @@ unauthRole.attachInlinePolicy(
   })
 );
 
-unauthRole.attachInlinePolicy(
-  new Policy(dataStack, 'GuestDdbPolicy_mdxUpdatesTable', {
-    statements: [
-      new PolicyStatement({
-        actions: ['dynamodb:GetItem', 'dynamodb:PutItem', 'dynamodb:UpdateItem'],
-        resources: [tbMDXupdates.tableArn],
-      }),
-    ],
-  })
-);
-
-unauthRole.attachInlinePolicy(
-  new Policy(seoStack, 'GuestDdbPolicy_seoTable', {
-    statements: [
-      new PolicyStatement({
-        actions: ['dynamodb:GetItem'],
-        resources: [seoTable.tableArn],
-      }),
-    ],
-  })
-);
-
 // Inject the table name into the Lambda’s environment
 //addCloudFrontKeyGroup(custom);//new CloudFront
 
@@ -230,22 +204,6 @@ unauthRole.attachInlinePolicy(
       queue: deadLetterQueue,
     },
   });
-
-   // 4️⃣ Subscribe SQS to SNS
-  textractTopic.addSubscription(new subs.SqsSubscription(textractQueue));
-
-  // 5️⃣ Allow SNS to send to SQS
-  textractQueue.addToResourcePolicy(new iam.PolicyStatement({
-    actions: ["sqs:SendMessage"],
-    principals: [new iam.ServicePrincipal("sns.amazonaws.com")],
-    resources: [textractQueue.queueArn],
-    conditions: {
-      ArnEquals: {
-        "aws:SourceArn": textractTopic.topicArn,
-      },
-    },
-  }));
-
   // 6️⃣ Allow Textract to publish to SNS
   const textractPublishRole = new iam.Role(custom, "TextractSNSPublishRole", {
     assumedBy: new iam.ServicePrincipal("textract.amazonaws.com"),

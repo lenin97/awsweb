@@ -54,8 +54,7 @@ def handler(event, context):
         resp = textract.start_document_text_detection(
             DocumentLocation={"S3Object": {"Bucket": bucket, "Name": key}},
             NotificationChannel={
-                "SNSTopicArn": os.environ["SNS_TOPIC_ARN"],
-                "RoleArn": os.environ["TEXTRACT_SNS_ROLE_ARN"]
+               
             },
             #ClientRequestToken=f"{bucket}:{key}:{int(time.time())}",
             JobTag=f"{progress_id}"

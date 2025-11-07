@@ -15,7 +15,6 @@ import type { Handler } from 'aws-lambda';
 import { PublishCommand, SNSClient } from "@aws-sdk/client-sns";
 import { getAmplifyDataClientConfig } from '@aws-amplify/backend/function/runtime';
 import { Amplify } from 'aws-amplify';
-import { env } from "$amplify/env/textractResult";
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import {
   DynamoDBDocumentClient,
@@ -23,8 +22,6 @@ import {
 } from '@aws-sdk/lib-dynamodb';
 
 // Amplify data client config (top-level await as in your original)
-const { resourceConfig, libraryOptions } = await getAmplifyDataClientConfig(env);
-Amplify.configure(resourceConfig, libraryOptions);
 
 const textract = new TextractClient({});
 const client = generateClient<Schema>();
