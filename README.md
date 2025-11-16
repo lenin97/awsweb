@@ -1,7 +1,7 @@
 # AI-Powered Job Application Assistant (AWS + Next.js + Amplify)
 
 This repository contains **one of the early base versions** of my AI-powered job application assistant, built with **Next.js (App Router)**, **Node.js**, and **AWS Amplify Gen 2**.  
-The app helps job seekers **tailor resumes** using AI, integrating a wide range of AWS services (Lambda, S3, SNS/SQS, Bedrock, AppSync, App Runner, CloudFront, etc.).
+The app helps job seekers **tailor resumes** using AI, integrating a wide range of AWS services (Lambda, S3, SNS/SQS, Bedrock, AppSync, App Runner, CloudFront, ECS Fargate Spot, etc.).
 
 ---
 
@@ -62,7 +62,8 @@ The current `.env.development` is empty or incomplete and must be populated with
 - Route 53  
 - AWS CDK  
 - Amazon ECR  
-- AWS App Runner  
+- AWS App Runner
+- Amazon ECS Fargate & Fargate Spot — serverless container compute, with Spot used for cost-efficient workloads
 - AWS CloudWatch  
 - AWS Bedrock  
 - AWS SDK  
@@ -81,7 +82,7 @@ The current `.env.development` is empty or incomplete and must be populated with
 - Serverless, event-driven backend using **Lambda, SNS, SQS, and S3 events**  
 - Generative AI capabilities via **AWS Bedrock** for automated content generation  
 - **Lambda Layer** included for image processing and performance optimization  
-- Dockerised full-stack application deployed on **AWS App Runner** with autoscaling  
+- Dockerised full-stack application deployed on **AWS App Runner** with autoscaling, plus **ECS Fargate Spot** for cost-optimized container workloads  
 - Custom domain routing configured using **Route 53**  
 - Static assets delivered globally via **CloudFront + S3**  
 - REST-style API layer using **AWS Amplify Data**, integrated with auth and storage  
