@@ -8,7 +8,6 @@ The app helps job seekers **tailor resumes** using AI, integrating a wide range 
 ## ⚠️ Important
 
 - This is **not** the production version of the application.  
-- The full, improved production system is **private** for business, security, and copyright reasons.  
 - The production version is still evolving, but its **AWS backend and core features are fully live and operating reliably**.
 
 ---
@@ -96,7 +95,7 @@ The current `.env.development` is empty or incomplete and must be populated with
 
 This repo provides **one of the first functional base versions** of the project.
 
-- The actual production system is **private**, more advanced, and significantly improved.  
+- The actual production system is more advanced, and significantly improved.  
 - Some architectural components here differ from the live version.  
 - This repository is shared for:
 
@@ -111,5 +110,4 @@ This repo provides **one of the first functional base versions** of the project.
 
 This repository is shared for **educational and demonstration purposes only**.  
 **All rights reserved.**  
-Use of the production code or architecture for **commercial purposes is not permitted**.
 
