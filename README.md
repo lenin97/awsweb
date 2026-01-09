@@ -12,16 +12,6 @@ The app helps job seekers **tailor resumes** using AI, integrating a wide range 
 
 ---
 
-## ✅ Live App
-
-**https://resumemakeai.com/**
-
-> **Note:** The site may occasionally be offline during updates or deployments.
-
-This public repository is shared **only for demonstration and educational purposes**.
-
----
-
 ## 🧩 Environment Variables
 
 To run this early version locally, you must fill in the variables inside:
