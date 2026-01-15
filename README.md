@@ -1,103 +1,219 @@
-# AI-Powered Job Application Assistant (AWS + Next.js + Amplify)
+# Serverless CV Upload & Processing Pipeline – High‑Level Flow
 
-This repository contains **one of the early base versions** of my AI-powered job application assistant, built with **Next.js (App Router)**, **Node.js**, and **AWS Amplify Gen 2**.  
-The app helps job seekers **tailor resumes** using AI, integrating a wide range of AWS services (Lambda, S3, SNS/SQS, Bedrock, AppSync, App Runner, CloudFront, ECS Fargate Spot, etc.).
+This document describes the **end‑to‑end execution flow** of the CV upload and processing pipeline.
+It focuses on **architecture, responsibilities, and event‑driven transitions**, while intentionally avoiding low‑level implementation details.
 
----
-
-## ⚠️ Important
-
-- This is **not** the production version of the application.  
-- The production version is still evolving, but its **AWS backend and core features are fully live and operating reliably**.
+The objective is to clearly demonstrate **production‑grade system design** suitable for technical reviewers and job applications.
 
 ---
 
-## 🧩 Environment Variables
+## Overall Architecture (Simplified)
 
-To run this early version locally, you must fill in the variables inside:
+```mermaid
+flowchart TD
+    A[Frontend] -->|uploadResolv| B[Amplify Backend]
+    B -->|Presigned URL| C[S3 Ingestion Bucket L1]
 
-.env.development
+    C -->|S3 Event| D[tailorCVEventS3]
 
+    D -->|DOCX| E[splitter-docx]
+    D -->|PDF| F[splitter-pdf]
 
-This file is included **only as a template**.  
-It will **not work** unless you replace its values with your own configuration, including:
+    %% PDF path uses fan-out via SQS and OCR
+    F -->|enqueue pages| G[SQS Queue]
+    G --> H[Per-page OCR Workers]
+    H -->|write page results| I[DynamoDB tcv-ddb-pdfs]
 
-- Your AWS Amplify environment details  
-- Your AWS region  
-- Your S3 bucket names  
-- API endpoints (AppSync, Lambda, internal APIs)  
-- Your domain or local dev URLs  
-- Any secrets required by your AWS setup  
+    %% DOCX path completes synchronously
+    E -->|update META all_pages_ready=true| I
 
-The current `.env.development` is empty or incomplete and must be populated with **your own AWS and web configuration**.
+    %% Stream-driven transitions
+    I -->|Stream MODIFY all_pages_ready true| K[aggregator]
 
----
+    %% Aggregator finalizes document
+    K -->|update META status DONE| I
+    K -->|final artifacts| L[S3 Output Bucket L2]
 
-# 🛠️ Tech Stack
-
-## **Frontend & Full-Stack**
-- Next.js (App Router, TypeScript)  
-- Node.js (runtime for development and server functions)  
-- React Server Components  
-- TailwindCSS  
-- Docker (containerised deployments)
-
-## **AWS Cloud Stack**
-- AWS Amplify (Gen 2)  
-- AWS Lambda  
-- SNS / SQS  
-- Amazon S3  
-- AWS CloudFront  
-- Route 53  
-- AWS CDK  
-- Amazon ECR  
-- AWS App Runner
-- Amazon ECS Fargate & Fargate Spot — serverless container compute, with Spot used for cost-efficient workloads
-- AWS CloudWatch  
-- AWS Bedrock  
-- AWS SDK  
-- Lambda Layers  
-- IAM
-
-## **Languages**
-- TypeScript  
-- Python  
-- Node.js (server-side logic and tooling)
+    %% Final stream trigger
+    I -->|Stream MODIFY status DONE| J[Textract Result Handler]
+```
 
 ---
 
-# 🚀 Key Features & Architecture
+## 1. Upload Initialization (Frontend → Backend)
 
-- Serverless, event-driven backend using **Lambda, SNS, SQS, and S3 events**  
-- Generative AI capabilities via **AWS Bedrock** for automated content generation  
-- **Lambda Layer** included for image processing and performance optimization  
-- Dockerised full-stack application deployed on **AWS App Runner** with autoscaling, plus **ECS Fargate Spot** for cost-optimized container workloads  
-- Custom domain routing configured using **Route 53**  
-- Static assets delivered globally via **CloudFront + S3**  
-- REST-style API layer using **AWS Amplify Data**, integrated with auth and storage  
-- **Infrastructure-as-Code** using AWS CDK for reproducible deployments  
-- CloudWatch monitoring for logs, metrics, and observability  
-- Modern full-stack architecture built on **Node.js + Next.js**
+The workflow starts when the frontend invokes the Amplify resolver:
 
----
+**`uploadResolv`**
 
-# 📌 About This Repository
+Responsibilities:
 
-This repo provides **one of the first functional base versions** of the project.
+* Validates the upload request
+* Creates initial document‑level metadata
+* Initializes a tracking record in DynamoDB
+* Returns pre‑signed S3 upload instructions
 
-- The actual production system is more advanced, and significantly improved.  
-- Some architectural components here differ from the live version.  
-- This repository is shared for:
-
-  - ✅ Learning  
-  - ✅ Technical reference  
-  - ✅ Demonstration of early architecture  
-  - ✅ Educational purposes  
+At this stage, the system establishes a **document identifier** and a **META record** that will act as the anchor for the entire pipeline.
 
 ---
 
-# 📄 License
+## 2. Raw File Upload (Client → S3)
 
-This repository is shared for **educational and demonstration purposes only**.  
-**All rights reserved.**  
+Using the pre‑signed URL, the client uploads the CV file directly to the **S3 ingestion bucket**.
 
+This design:
+
+* Keeps Lambdas stateless
+* Avoids routing large files through compute
+* Improves scalability and cost efficiency
+
+The upload event marks the transition to a fully **event‑driven backend flow**.
+
+---
+
+## 3. Initial S3 Event Handling
+
+An `ObjectCreated` event from S3 triggers the Lambda:
+
+**`tailorCVEventS3`**
+
+High‑level responsibilities:
+
+* Registers the uploaded file
+* Updates document metadata in DynamoDB
+* Determines the processing path based on file type
+
+Rather than invoking downstream functions directly, this Lambda **routes work by updating state** and delegating responsibility.
+
+---
+
+## 4. File Splitting Stage (Explicit)
+
+Document splitting is handled by **specialized, format‑specific Lambdas**.
+
+### 4.1 DOCX Splitter – `splitter-docx`
+
+* Splits DOCX documents into page‑level units
+* Produces normalized artifacts suitable for OCR
+* Updates page‑level records in DynamoDB
+
+### 4.2 PDF Splitter – `splitter-pdf`
+
+* Splits PDFs into individual pages
+* Converts each page into an image‑based representation
+* Updates page‑level records in DynamoDB
+
+After this stage, **each page becomes an independent unit of work**, enabling parallel processing.
+
+---
+
+## 5. Per‑Page OCR Processing (SQS‑Driven)
+
+For each generated page:
+
+* A message is sent to **Amazon SQS**
+* Each message triggers a per‑page OCR worker Lambda
+
+Each worker:
+
+* Processes exactly one page
+* Persists extracted text and metadata
+* Updates page‑level state in DynamoDB
+
+This stage scales horizontally and remains fully decoupled from document‑level logic.
+
+---
+
+## 6. DynamoDB as the Coordination Layer
+
+All processing state is tracked in a single DynamoDB table:
+
+**`tcv-ddb-pdfs`**
+
+Key characteristics:
+
+* Document‑level **META record**
+* Page‑level records for fine‑grained progress tracking
+* DynamoDB Streams enabled
+
+Rather than using explicit orchestration services, **state transitions in DynamoDB drive the pipeline forward**.
+
+---
+
+## 7. Aggregation (DynamoDB Stream‑Driven)
+
+A Lambda named:
+
+**`aggregator`**
+
+is triggered exclusively via **DynamoDB Streams**, using strict filters.
+
+It runs only when:
+
+* The document META record is modified
+* All page‑level records indicate completion
+* The document transitions into an aggregation‑ready state
+
+Responsibilities:
+
+* Aggregates page‑level outputs
+* Produces a single consolidated document representation
+* Writes derived artifacts to the output S3 bucket
+
+This cleanly separates **parallel page processing** from **document‑level aggregation**.
+
+---
+
+## 8. Textract Result Handling (Stream‑Driven)
+
+A dedicated **Textract Result Handler** Lambda is also attached to the DynamoDB Stream.
+
+It is triggered only when:
+
+* The META record is modified
+* The document status transitions to `DONE`
+
+Responsibilities:
+
+* Consumes finalized OCR and aggregation outputs
+* Prepares the document for downstream AI processing
+* Updates final document state
+
+This guarantees **deterministic, exactly‑once execution** at the document level.
+
+---
+
+## 9. Finalization & Output
+
+Once processing completes:
+
+* The document state is marked as complete
+* Final artifacts are available in the output S3 bucket
+* The frontend can safely retrieve results
+
+The backend workflow ends without requiring synchronous coordination.
+
+---
+
+## Architectural Principles Demonstrated
+
+This pipeline intentionally highlights:
+
+* Event‑driven design using **S3, SQS, and DynamoDB Streams**
+* Loose coupling via state‑based transitions
+* Stateless Lambdas with single responsibilities
+* Horizontal scalability without heavy orchestration
+* A production‑ready alternative to monolithic Step Functions
+
+---
+
+## Why This Matters
+
+This repository demonstrates:
+
+* Real‑world AWS serverless design
+* Advanced DynamoDB Stream filtering
+* Clear separation of concerns
+* Interview‑ready, explainable architecture
+
+The focus is on **clarity, correctness, and architectural maturity**, not implementation noise.
